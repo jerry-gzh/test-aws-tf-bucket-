@@ -7,5 +7,5 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "example" {
-  bucket = "repo-a-dev-example-bucket-123456"
+  bucket = "jerry-gzh-repo-a-dev-example-839406385516"
 }
