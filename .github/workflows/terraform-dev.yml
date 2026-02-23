@@ -1,5 +1,10 @@
+# Pipeline principal de Terraform para el entorno dev.
+# En PR ejecuta validaciones + plan; en main aplica cambios.
 name: terraform-dev
 
+# Disparadores del workflow:
+# - PR con cambios relevantes de Terraform/workflows
+# - Push a main con cambios relevantes
 on:
   pull_request:
     paths:
@@ -13,15 +18,21 @@ on:
       - "modules/**"
       - ".github/workflows/**"
 
+# Permisos minimos para:
+# - leer el repo
+# - obtener token OIDC y asumir rol en AWS
 permissions:
   contents: read
   id-token: write
 
+# Variables globales usadas por todos los jobs
 env:
   AWS_REGION: us-east-1
   TF_IN_AUTOMATION: "true"
 
 jobs:
+  # Job de validacion: formatea, inicializa, valida y genera plan.
+  # Este job debe pasar antes de permitir apply.
   plan:
     runs-on: ubuntu-latest
     defaults:
@@ -52,6 +63,8 @@ jobs:
       - name: Terraform plan
         run: terraform plan -input=false
 
+  # Job de despliegue: solo se ejecuta en rama main
+  # y solo despues de que plan finalice correctamente.
   apply:
     if: github.ref == 'refs/heads/main'
     needs: plan
