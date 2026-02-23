@@ -14,12 +14,23 @@ Repositorio de ejemplo para crear y administrar un bucket S3 con Terraform, usan
 
 ## 🧱 Estructura del proyecto
 
-- `versions.tf`, `providers.tf`, `variables.tf`: configuracion base de Terraform.
-- `environments/dev/main.tf`: recurso S3 del entorno dev.
-- `environments/dev/backend.tf`: backend remoto (S3 + DynamoDB).
-- `.github/workflows/terraform-dev.yml`: pipeline de CI/CD.
-- `aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json`: trust policy de ejemplo.
-- `aws_policies/tf-lab-s3-dev.json`: policy de permisos del rol.
+```text
+test-aws-tf-bucket-/                                        # Raiz del proyecto Terraform
+├── .github/                                                # Configuracion de GitHub
+│   └── workflows/                                          # Pipelines CI/CD
+│       └── terraform-dev.yml                               # Workflow de plan/apply para entorno dev
+├── aws_policies/                                           # Policies IAM de ejemplo para OIDC y permisos
+│   ├── gh-actions-terraform-test-aws-tf-bucket-dev.json   # Trust policy del rol asumido por GitHub Actions
+│   └── tf-lab-s3-dev.json                                  # Permission policy (S3 + DynamoDB + backend)
+├── environments/                                           # Configuracion por ambiente
+│   └── dev/                                                # Ambiente de desarrollo
+│       ├── .terraform.lock.hcl                             # Lock de versiones de providers
+│       ├── backend.tf                                      # Backend remoto: S3 state + DynamoDB lock
+│       └── main.tf                                         # Recursos del laboratorio (bucket S3)
+├── providers.tf                                            # Configuracion del provider AWS
+├── variables.tf                                            # Variables de entrada del proyecto
+└── versions.tf                                             # Version de Terraform y providers requeridos
+```
 
 > ⚠️ Nota: la carpeta `aws_policies/` normalmente no se publica en proyectos productivos. En este repo se incluye solo para ejemplificar como deben verse estos archivos.
 
