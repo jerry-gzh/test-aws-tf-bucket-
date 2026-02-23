@@ -1,0 +1,39 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "ListBucketForOwnPrefix",
+			"Effect": "Allow",
+			"Action": "s3:ListBucket",
+			"Resource": "arn:aws:s3:::jerry-infra-tfstates-dev",
+			"Condition": {
+				"StringLike": {
+					"s3:prefix": [
+						"test-aws-tf-bucket/dev/*"
+					]
+				}
+			}
+		},
+		{
+			"Sid": "RWStateForOwnPrefix",
+			"Effect": "Allow",
+			"Action": [
+				"s3:GetObject",
+				"s3:PutObject",
+				"s3:DeleteObject"
+			],
+			"Resource": "arn:aws:s3:::jerry-infra-tfstates-dev/test-aws-tf-bucket/dev/*"
+		},
+		{
+			"Sid": "DynamoDBLocking",
+			"Effect": "Allow",
+			"Action": [
+				"dynamodb:GetItem",
+				"dynamodb:PutItem",
+				"dynamodb:DeleteItem",
+				"dynamodb:DescribeTable"
+			],
+			"Resource": "arn:aws:dynamodb:us-east-1:839406385516:table/terraform-locks"
+		}
+	]
+}

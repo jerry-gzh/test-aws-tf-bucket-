@@ -1,14 +1,14 @@
-# Terraform AWS S3 Lab (Dev)
+# 🚀 Terraform AWS S3 Lab (Dev)
 
 Repositorio de infraestructura como codigo con Terraform para crear y administrar un bucket S3 en AWS, usando backend remoto en S3, locking con DynamoDB y despliegue CI/CD con GitHub Actions + OIDC.
 
-## Objetivo
+## 🎯 Objetivo
 
 - Crear y administrar un bucket S3 de laboratorio en `dev`.
 - Guardar el estado de Terraform en backend remoto seguro.
 - Ejecutar `plan` y `apply` desde GitHub Actions sin access keys estaticas.
 
-## Arquitectura del Proyecto
+## 🧱 Arquitectura del Proyecto
 
 - Terraform root:
   - `versions.tf`
@@ -22,18 +22,18 @@ Repositorio de infraestructura como codigo con Terraform para crear y administra
 - Politica IAM de ejemplo del rol CI:
   - `tf-lab-s3-dev.json`
 
-## Prerrequisitos
+## ✅ Prerrequisitos
 
 - Cuenta AWS con permisos para IAM, S3 y DynamoDB.
 - Repositorio en GitHub.
 - Terraform `>= 1.7.0`.
 - AWS CLI configurado localmente (solo para pruebas locales).
 
-## Setup Inicial en Windows (Desde Cero)
+## 🛠️ Setup Inicial en Windows (Desde Cero)
 
 Antes de trabajar con Terraform en este repositorio, instala estas herramientas base en tu equipo Windows.
 
-### 1. Instalar Chocolatey
+### 1. 🍫 Instalar Chocolatey
 
 Abrir **PowerShell como Administrador** y ejecutar:
 
@@ -47,7 +47,7 @@ Validar instalacion:
 choco -v
 ```
 
-### 2. Instalar Terraform
+### 2. 📦 Instalar Terraform
 
 En PowerShell (idealmente como Administrador), ejecutar:
 
@@ -61,18 +61,23 @@ Validar instalacion:
 terraform -version
 ```
 
-### 3. Validar setup inicial
+### 3. ☁️ Instalar AWS CLI
 
-Ejecuta estos comandos para confirmar que el entorno local quedo listo:
+En PowerShell (idealmente como Administrador), ejecutar:
 
 ```powershell
-choco -v
-terraform -version
+choco install awscli -y
+```
+
+Validar instalacion:
+
+```powershell
 aws --version
 ```
-## Paso a Paso
 
-### 1. Clonar repositorio e instalar herramientas
+## 🧭 Paso a Paso
+
+### 1. 📁 Clonar repositorio e instalar herramientas
 
 ```bash
 git clone <tu-repo>
@@ -81,7 +86,7 @@ terraform -version
 aws --version
 ```
 
-### 2. Configurar provider y version de Terraform
+### 2. ⚙️ Configurar provider y version de Terraform
 
 El proyecto ya define:
 
@@ -89,7 +94,7 @@ El proyecto ya define:
 - Provider AWS `hashicorp/aws ~> 5.0` en `versions.tf`.
 - Region por variable `aws_region` en `variables.tf` y `providers.tf`.
 
-### 3. Definir recurso de infraestructura (dev)
+### 3. 🏗️ Definir recurso de infraestructura (dev)
 
 En `environments/dev/main.tf` se crea el bucket S3:
 
@@ -99,7 +104,7 @@ resource "aws_s3_bucket" "example" {
 }
 ```
 
-### 4. Configurar backend remoto de Terraform
+### 4. 🗄️ Configurar backend remoto de Terraform
 
 En `environments/dev/backend.tf`:
 
@@ -114,51 +119,57 @@ Crear previamente en AWS:
 - Bucket S3 para state con versioning y bloqueo publico.
 - Tabla DynamoDB `terraform-locks` con partition key `LockID` (String).
 
-### 5. Configurar IAM OIDC para GitHub Actions
+### 5. ?? Configuraciones dentro del portal AWS
 
-1. Crear Identity Provider en IAM:
-- Provider: `https://token.actions.githubusercontent.com`
-- Audience: `sts.amazonaws.com`
+En esta parte se configura **como GitHub Actions obtiene permisos temporales en AWS** sin usar access keys fijas.
 
-2. Crear rol IAM para GitHub Actions:
-- Nombre usado en este proyecto: `gh-actions-terraform-test-aws-tf-bucket-dev`
+Definiciones clave:
 
-3. Configurar trust policy del rol para tu repo (`sub`):
+- **IAM OIDC (Identity Provider):** conecta AWS con el emisor de tokens de GitHub (`token.actions.githubusercontent.com`).
+- **Rol IAM (para GitHub Actions):** identidad que asume el workflow para ejecutar `terraform plan/apply`.
+- **Trust Policy (del rol):** define *quien* puede asumir el rol (OIDC + repo autorizado).
+- **Policy de permisos (adjunta al rol):** define *que* acciones puede ejecutar el rol en S3/DynamoDB.
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-        },
-        "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:<OWNER>/<REPO>:*"
-        }
-      }
-    }
-  ]
-}
+### 6. ?? Relacion entre componentes y archivos JSON de referencia
+
+Relacion entre componentes:
+
+1. GitHub Actions solicita un token OIDC.
+2. AWS valida el token contra el Identity Provider OIDC.
+3. Si la **trust policy** lo permite, AWS entrega credenciales temporales del rol.
+4. El rol ejecuta Terraform con los permisos definidos en su **policy IAM** adjunta.
+
+Tabla de referencia rapida:
+
+| Componente | Que define | Donde se configura en AWS | Archivo de referencia |
+| --- | --- | --- | --- |
+| IAM OIDC Provider | Confianza entre AWS y GitHub OIDC | IAM -> Identity providers | N/A (se crea en consola AWS) |
+| IAM Role (`gh-actions-terraform-test-aws-tf-bucket-dev`) | Identidad que asume GitHub Actions | IAM -> Roles | N/A (se crea en consola AWS) |
+| Trust Policy del rol | Quien puede asumir el rol (`aud`/`sub`) | IAM -> Roles -> Trust relationships | [`aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json`](aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json) |
+| Permission Policy del rol | Que acciones permite (S3, DynamoDB) | IAM -> Roles -> Permissions | [`aws_policies/tf-lab-s3-dev.json`](aws_policies/tf-lab-s3-dev.json) |
+
+Diagrama de flujo / jerarquia:
+
+```mermaid
+flowchart TD
+    A[GitHub Actions Workflow<br/>terraform-dev.yml] --> B[OIDC Token<br/>token.actions.githubusercontent.com]
+    B --> C[AWS IAM OIDC Provider]
+    C --> D[IAM Role<br/>gh-actions-terraform-test-aws-tf-bucket-dev]
+    E[Trust Policy] --> D
+    F[Permission Policy] --> D
+    D --> G[Terraform Plan/Apply]
+    G --> H[S3 Bucket de laboratorio<br/>jerry-gzh-*]
+    G --> I[S3 Backend State<br/>jerry-infra-tfstates-dev]
+    G --> J[DynamoDB Lock Table<br/>terraform-locks]
 ```
 
-### 6. Adjuntar politica IAM al rol de CI
+Archivos JSON de referencia en este repositorio:
 
-Adjuntar una policy como base la de `tf-lab-s3-dev.json`, cubriendo:
+- Trust policy del rol: [`aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json`](aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json)
+- Policy de permisos del rol (S3 + backend Terraform): [`aws_policies/tf-lab-s3-dev.json`](aws_policies/tf-lab-s3-dev.json)
 
-- Operaciones sobre buckets de laboratorio `jerry-gzh-*`.
-- Acceso al backend state en `jerry-infra-tfstates-dev/test-aws-tf-bucket/dev/*`.
-- Locking DynamoDB en `terraform-locks`.
-
-Nota: Terraform puede requerir acciones de lectura adicionales de S3 durante el `refresh` (por ejemplo `GetBucketPolicy`, `GetBucketRequestPayment`, `GetBucketObjectLockConfiguration`).
-
-### 7. Configurar workflow GitHub Actions
+> ⚠️ Nota: la carpeta `aws_policies/` normalmente **no se publica** en proyectos productivos. En este repo se incluye solo para ejemplificar como deben configurarse estos archivos.
+### 7. 🤖 Configurar workflow GitHub Actions
 
 El workflow `.github/workflows/terraform-dev.yml` ya implementa:
 
@@ -167,7 +178,7 @@ El workflow `.github/workflows/terraform-dev.yml` ya implementa:
 - Job `apply` solo en `main`.
 - Autenticacion AWS por OIDC (`id-token: write`).
 
-### 8. Flujo de ejecucion recomendado
+### 8. 🔄 Flujo de ejecucion recomendado
 
 1. Crear rama y cambios Terraform.
 2. Abrir Pull Request.
@@ -175,7 +186,7 @@ El workflow `.github/workflows/terraform-dev.yml` ya implementa:
 4. Hacer merge a `main`.
 5. Validar `terraform apply` en Actions.
 
-## Ejecucion Local (Opcional / Recomendado)
+## 💻 Ejecucion Local (Opcional / Recomendado)
 
 Desde `environments/dev`:
 
@@ -186,7 +197,7 @@ terraform validate
 terraform plan -input=false
 ```
 
-## Buenas Practicas
+## 🔒 Buenas Practicas
 
 - No commitear archivos `.tfstate` ni `.tfstate.backup`.
 - Mantener permisos IAM en minimo privilegio.
@@ -194,7 +205,7 @@ terraform plan -input=false
 - Usar nombres predecibles por ambiente (`dev`, `qas`, `prd`).
 - Revisar siempre el `plan` antes de aplicar.
 
-## Troubleshooting Rapido
+## 🩺 Troubleshooting Rapido
 
 - Error `AccessDenied` en `GetBucket*` durante plan:
   - Falta accion IAM de lectura S3 en el rol de GitHub Actions.
