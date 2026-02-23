@@ -1,0 +1,35 @@
+name: code-scanning
+
+on:
+  pull_request:
+    paths:
+      - "**/*.tf"
+      - ".github/workflows/**"
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "20 4 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy-config-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          format: sarif
+          output: trivy-config.sarif
+          severity: HIGH,CRITICAL
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-config.sarif
