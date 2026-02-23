@@ -17,8 +17,12 @@ Repositorio de ejemplo para crear y administrar un bucket S3 con Terraform, usan
 ```text
 test-aws-tf-bucket-/                                        # Raiz del proyecto Terraform
 ├── .github/                                                # Configuracion de GitHub
+│   ├── dependabot.yml                                      # Configuracion de actualizaciones automaticas (Dependabot)
 │   └── workflows/                                          # Pipelines CI/CD
-│       └── terraform-dev.yml                               # Workflow de plan/apply para entorno dev
+│       ├── terraform-dev.yml                               # Workflow principal: plan/apply para entorno dev
+│       ├── lint.yml                                        # Validaciones de calidad: fmt, validate y tflint
+│       ├── code-scanning.yml                               # Escaneo de seguridad IaC con Trivy + SARIF
+│       └── codeql.yml                                      # Analisis de seguridad para workflows (CodeQL)
 ├── aws_policies/                                           # Policies IAM de ejemplo para OIDC y permisos
 │   ├── gh-actions-terraform-test-aws-tf-bucket-dev.json   # Trust policy del rol asumido por GitHub Actions
 │   └── tf-lab-s3-dev.json                                  # Permission policy (S3 + DynamoDB + backend)
@@ -27,6 +31,7 @@ test-aws-tf-bucket-/                                        # Raiz del proyecto 
 │       ├── .terraform.lock.hcl                             # Lock de versiones de providers
 │       ├── backend.tf                                      # Backend remoto: S3 state + DynamoDB lock
 │       └── main.tf                                         # Recursos del laboratorio (bucket S3)
+├── .tflint.hcl                                             # Reglas de TFLint para validar Terraform/AWS
 ├── providers.tf                                            # Configuracion del provider AWS
 ├── variables.tf                                            # Variables de entrada del proyecto
 └── versions.tf                                             # Version de Terraform y providers requeridos
@@ -194,6 +199,35 @@ El workflow `.github/workflows/terraform-dev.yml` ya tiene:
 - Job `plan` para validar cambios.
 - Job `apply` condicionado a rama `main`.
 - Permisos OIDC (`id-token: write`).
+
+## 🧪 Validaciones del proyecto (CI/CD)
+
+Estas son las validaciones automáticas configuradas en el repositorio:
+
+1. **Terraform pipeline (`.github/workflows/terraform-dev.yml`)**
+- Valida formato y sintaxis Terraform.
+- Ejecuta `plan` en PR para previsualizar cambios.
+- Ejecuta `apply` en `main` para aplicar cambios en AWS.
+
+2. **Linter (`.github/workflows/lint.yml`)**
+- Ejecuta `terraform fmt -check`.
+- Ejecuta `terraform validate` (sin backend remoto en lint).
+- Ejecuta `tflint` con reglas de Terraform/AWS para detectar malas prácticas y problemas de calidad.
+
+3. **Code scanning IaC (`.github/workflows/code-scanning.yml`)**
+- Usa Trivy para escanear configuraciones Terraform.
+- Detecta riesgos de seguridad en infraestructura como código.
+- Publica resultados en GitHub Security (SARIF).
+
+4. **CodeQL (`.github/workflows/codeql.yml`)**
+- Analiza seguridad del código de workflows de GitHub Actions.
+- Ayuda a detectar patrones inseguros en automatizaciones CI/CD.
+
+5. **Dependabot (`.github/dependabot.yml`)**
+- Revisa dependencias de GitHub Actions y Terraform.
+- Crea Pull Requests automáticos para actualizar versiones vulnerables o desactualizadas.
+
+> Tip: todos los workflows de validación están habilitados con `workflow_dispatch`, por lo que también puedes ejecutarlos manualmente desde la pestaña **Actions**.
 
 ## 🩺 Troubleshooting rapido
 
