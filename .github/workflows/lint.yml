@@ -6,12 +6,14 @@ on:
     paths:
       - "**/*.tf"
       - "**/*.tfvars"
+      - "**/*.hcl"
       - ".github/workflows/**"
   push:
     branches: ["main"]
     paths:
       - "**/*.tf"
       - "**/*.tfvars"
+      - "**/*.hcl"
       - ".github/workflows/**"
 
 permissions:
@@ -30,12 +32,10 @@ jobs:
       - name: Terraform fmt (check)
         run: terraform fmt -check -recursive
 
-      - name: Terraform init (dev, sin backend remoto)
-        working-directory: environments/dev
+      - name: Terraform init (root, sin backend remoto)
         run: terraform init -input=false -backend=false
 
-      - name: Terraform validate (dev)
-        working-directory: environments/dev
+      - name: Terraform validate (root)
         run: terraform validate
 
       - name: Setup TFLint

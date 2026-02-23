@@ -27,11 +27,25 @@ test-aws-tf-bucket-/                                        # Raiz del proyecto 
 │   ├── gh-actions-terraform-test-aws-tf-bucket-dev.json   # Trust policy del rol asumido por GitHub Actions
 │   └── tf-lab-s3-dev.json                                  # Permission policy (S3 + DynamoDB + backend)
 ├── environments/                                           # Configuracion por ambiente
-│   └── dev/                                                # Ambiente de desarrollo
-│       ├── .terraform.lock.hcl                             # Lock de versiones de providers
-│       ├── backend.tf                                      # Backend remoto: S3 state + DynamoDB lock
-│       └── main.tf                                         # Recursos del laboratorio (bucket S3)
+│   ├── dev/
+│   │   └── backend.hcl                                     # Backend remoto de dev (bucket/key/lock table)
+│   ├── qas/
+│   │   └── backend.hcl                                     # Backend remoto de qas
+│   └── prd/
+│       └── backend.hcl                                     # Backend remoto de prd
+├── modules/
+│   └── s3_bucket/
+│       ├── main.tf                                         # Recurso S3 reusable
+│       ├── variables.tf                                    # Inputs del modulo
+│       └── outputs.tf                                      # Outputs del modulo
+├── variables/
+│   ├── global.auto.tfvars                                  # Variables globales comunes a todos los ambientes
+│   ├── env-dev.tfvars                                      # Variables del ambiente dev
+│   ├── env-qas.tfvars                                      # Variables del ambiente qas
+│   └── env-prd.tfvars                                      # Variables del ambiente prd
 ├── .tflint.hcl                                             # Reglas de TFLint para validar Terraform/AWS
+├── main.tf                                                 # Root module: orquesta modulos y backend
+├── outputs.tf                                              # Outputs del root module
 ├── providers.tf                                            # Configuracion del provider AWS
 ├── variables.tf                                            # Variables de entrada del proyecto
 └── versions.tf                                             # Version de Terraform y providers requeridos
@@ -176,11 +190,11 @@ flowchart TD
 
 ```bash
 git clone <tu-repo>
-cd test-aws-tf-bucket-/environments/dev
+cd test-aws-tf-bucket-
 terraform fmt -check -recursive
-terraform init -input=false
+terraform init -input=false -reconfigure -backend-config=environments/dev/backend.hcl
 terraform validate
-terraform plan -input=false
+terraform plan -input=false -var-file=variables/global.auto.tfvars -var-file=variables/env-dev.tfvars
 ```
 
 ### 7. Flujo diario seguro (PR -> plan -> apply)
@@ -240,10 +254,9 @@ Estas son las validaciones automáticas configuradas en el repositorio:
 Solo para entorno controlado (laboratorio dev):
 
 ```bash
-cd environments/dev
-terraform init -input=false
-terraform plan -destroy -input=false
-terraform destroy -auto-approve
+terraform init -input=false -reconfigure -backend-config=environments/dev/backend.hcl
+terraform plan -destroy -input=false -var-file=variables/global.auto.tfvars -var-file=variables/env-dev.tfvars
+terraform destroy -auto-approve -var-file=variables/global.auto.tfvars -var-file=variables/env-dev.tfvars
 ```
 
 Recomendaciones:
