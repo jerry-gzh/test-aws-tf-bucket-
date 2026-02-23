@@ -6,6 +6,7 @@ name: terraform-dev
 # - PR con cambios relevantes de Terraform/workflows
 # - Push a main con cambios relevantes
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "environments/dev/**"
