@@ -3,30 +3,30 @@
 Repositorio de ejemplo para crear y administrar un bucket S3 con Terraform, usando:
 
 - Backend remoto en S3 para guardar state.
-- Locking en DynamoDB para evitar ejecuciones simultaneas.
-- GitHub Actions + OIDC para `plan` y `apply` sin access keys estaticas.
+- Locking en DynamoDB para evitar ejecuciones simultáneas.
+- GitHub Actions + OIDC para `plan` y `apply` sin access keys estáticas.
 
 ## 🎯 Objetivo
 
-- Estandarizar infraestructura como codigo (IaC).
+- Estandarizar infraestructura como código (IaC).
 - Ejecutar cambios de forma segura con Pull Request.
 - Enseñar un flujo base de DevOps para equipos principiantes.
 
 ## 🧱 Estructura del proyecto
 
 ```text
-test-aws-tf-bucket-/                                        # Raiz del proyecto Terraform
-├── .github/                                                # Configuracion de GitHub
-│   ├── dependabot.yml                                      # Configuracion de actualizaciones automaticas (Dependabot)
+test-aws-tf-bucket-/                                        # Raíz del proyecto Terraform
+├── .github/                                                # Configuración de GitHub
+│   ├── dependabot.yml                                      # Configuración de actualizaciones automáticas (Dependabot)
 │   └── workflows/                                          # Pipelines CI/CD
 │       ├── terraform-dev.yml                               # Workflow principal: plan/apply para entorno dev
 │       ├── lint.yml                                        # Validaciones de calidad: fmt, validate y tflint
 │       ├── code-scanning.yml                               # Escaneo de seguridad IaC con Trivy + SARIF
-│       └── codeql.yml                                      # Analisis de seguridad para workflows (CodeQL)
+│       └── codeql.yml                                      # Análisis de seguridad para workflows (CodeQL)
 ├── aws_policies/                                           # Policies IAM de ejemplo para OIDC y permisos
 │   ├── gh-actions-terraform-test-aws-tf-bucket-dev.json   # Trust policy del rol asumido por GitHub Actions
 │   └── tf-lab-s3-dev.json                                  # Permission policy (S3 + DynamoDB + backend)
-├── environments/                                           # Configuracion por ambiente
+├── environments/                                           # Configuración por ambiente
 │   ├── dev/
 │   │   └── backend.hcl                                     # Backend remoto de dev (bucket/key/lock table)
 │   ├── qas/
@@ -36,22 +36,23 @@ test-aws-tf-bucket-/                                        # Raiz del proyecto 
 ├── modules/
 │   └── s3_bucket/
 │       ├── main.tf                                         # Recurso S3 reusable
-│       ├── variables.tf                                    # Inputs del modulo
-│       └── outputs.tf                                      # Outputs del modulo
+│       ├── variables.tf                                    # Inputs del módulo
+│       └── outputs.tf                                      # Outputs del módulo
 ├── variables/
 │   ├── global.auto.tfvars                                  # Variables globales comunes a todos los ambientes
 │   ├── env-dev.tfvars                                      # Variables del ambiente dev
 │   ├── env-qas.tfvars                                      # Variables del ambiente qas
 │   └── env-prd.tfvars                                      # Variables del ambiente prd
 ├── .tflint.hcl                                             # Reglas de TFLint para validar Terraform/AWS
-├── main.tf                                                 # Root module: orquesta modulos y backend
+├── .terraform.lock.hcl                                     # Lock de versiones de providers en el root module
+├── main.tf                                                 # Root module: orquesta módulos y backend
 ├── outputs.tf                                              # Outputs del root module
-├── providers.tf                                            # Configuracion del provider AWS
+├── providers.tf                                            # Configuración del provider AWS
 ├── variables.tf                                            # Variables de entrada del proyecto
-└── versions.tf                                             # Version de Terraform y providers requeridos
+└── versions.tf                                             # Versión de Terraform y providers requeridos
 ```
 
-> ⚠️ Nota: la carpeta `aws_policies/` normalmente no se publica en proyectos productivos. En este repo se incluye solo para ejemplificar como deben verse estos archivos.
+> ⚠️ Nota: la carpeta `aws_policies/` normalmente no se publica en proyectos productivos. En este repo se incluye solo para ejemplificar cómo deben verse estos archivos.
 
 ## ✅ Prerrequisitos
 
@@ -107,12 +108,12 @@ aws sts get-caller-identity
 - Region: `us-east-1`
 - Tabla lock: `terraform-locks`
 
-Por que existe cada recurso:
+Por qué existe cada recurso:
 
 - **S3 state bucket**: guarda `terraform.tfstate` (la referencia de lo que Terraform administra).
 - **DynamoDB lock table**: evita que dos ejecuciones modifiquen el mismo state al mismo tiempo.
 
-Diagrama basico (backend remoto + interaccion GitHub/AWS):
+Diagrama básico (backend remoto + interacción GitHub/AWS):
 
 ```mermaid
 flowchart LR
@@ -123,9 +124,9 @@ flowchart LR
     C --> F[S3 Bucket Recurso\njerry-gzh-*]
 ```
 
-Como crearlo en consola AWS:
+Cómo crearlo en consola AWS:
 
-1. S3 -> Create bucket -> `jerry-infra-tfstates-dev` (region `us-east-1`).
+1. S3 -> Create bucket -> `jerry-infra-tfstates-dev` (región `us-east-1`).
 2. Mantener Block Public Access habilitado.
 3. Habilitar Versioning y Default Encryption.
 4. DynamoDB -> Create table -> `terraform-locks`.
@@ -154,23 +155,23 @@ Definiciones:
 
 - **IAM OIDC Provider**: confianza entre AWS y `token.actions.githubusercontent.com`.
 - **IAM Role**: identidad temporal asumida por GitHub Actions.
-- **Trust Policy**: define quien puede asumir el rol.
-- **Permission Policy**: define que puede hacer el rol en AWS.
+- **Trust Policy**: define quién puede asumir el rol.
+- **Permission Policy**: define qué puede hacer el rol en AWS.
 
-Relacion entre componentes:
+Relación entre componentes:
 
 1. GitHub Actions solicita token OIDC.
 2. AWS valida token contra OIDC provider.
 3. Si la trust policy coincide (`aud` y `sub`), AWS entrega credenciales temporales.
-4. Terraform usa esas credenciales y opera segun la permission policy.
+4. Terraform usa esas credenciales y opera según la permission policy.
 
 Tabla de referencia:
 
-| Componente | Que define | Donde se configura en AWS | Archivo de referencia |
+| Componente | Qué define | Dónde se configura en AWS | Archivo de referencia |
 | --- | --- | --- | --- |
 | IAM OIDC Provider | Confianza AWS <-> GitHub OIDC | IAM -> Identity providers | N/A |
 | IAM Role (`gh-actions-terraform-test-aws-tf-bucket-dev`) | Identidad para CI | IAM -> Roles | N/A |
-| Trust Policy | Quien asume el rol (`aud`/`sub`) | IAM -> Role -> Trust relationships | [`aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json`](aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json) |
+| Trust Policy | Quién asume el rol (`aud`/`sub`) | IAM -> Role -> Trust relationships | [`aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json`](aws_policies/gh-actions-terraform-test-aws-tf-bucket-dev.json) |
 | Permission Policy | Acciones permitidas (S3/DynamoDB) | IAM -> Role -> Permissions | [`aws_policies/tf-lab-s3-dev.json`](aws_policies/tf-lab-s3-dev.json) |
 
 ```mermaid
@@ -186,7 +187,7 @@ flowchart TD
     G --> J[DynamoDB lock table]
 ```
 
-### 6. Primera ejecucion guiada (local)
+### 6. Primera ejecución guiada (local)
 
 ```bash
 git clone <tu-repo>
@@ -231,7 +232,7 @@ Estas son las validaciones automáticas configuradas en el repositorio:
 3. **Code scanning IaC (`.github/workflows/code-scanning.yml`)**
 - Usa Trivy para escanear configuraciones Terraform.
 - Detecta riesgos de seguridad en infraestructura como código.
-- Publica resultados en GitHub Security (SARIF).
+- Publica resultados en GitHub Security en formato **SARIF**.
 
 4. **CodeQL (`.github/workflows/codeql.yml`)**
 - Analiza seguridad del código de workflows de GitHub Actions.
@@ -243,7 +244,7 @@ Estas son las validaciones automáticas configuradas en el repositorio:
 
 > Tip: todos los workflows de validación están habilitados con `workflow_dispatch`, por lo que también puedes ejecutarlos manualmente desde la pestaña **Actions**.
 
-## 🩺 Troubleshooting rapido
+## 🩺 Troubleshooting rápido
 
 - `AccessDenied` en acciones `GetBucket*`: falta permiso IAM en el rol de GitHub Actions.
 - Error de backend S3/DynamoDB: revisar existencia/permisos del bucket de state y tabla lock.
@@ -263,29 +264,30 @@ Recomendaciones:
 
 - Siempre revisar `plan -destroy` antes de destruir.
 - No ejecutar `destroy` en ambientes productivos.
-- Confirmar que no haya otra ejecucion usando el mismo state.
+- Confirmar que no haya otra ejecución usando el mismo state.
 
 ⚠️ Advertencia de costos AWS:
 
 - Los recursos activos generan cargos.
 - Destruir laboratorios no usados evita costos innecesarios.
-- Revisar AWS Billing / Cost Explorer periodicamente.
+- Revisar AWS Billing / Cost Explorer periódicamente.
 
-## 📖 Glosario basico
+## 📖 Glosario básico
 
-- **IaC**: Infraestructura definida por codigo versionado.
+- **IaC**: Infraestructura definida por código versionado.
 - **Terraform**: herramienta para crear/gestionar infraestructura.
 - **Provider**: plugin de Terraform para un proveedor cloud.
 - **State**: archivo de estado (`terraform.tfstate`).
-- **Backend remoto**: ubicacion central del state (S3 en este proyecto).
+- **Backend remoto**: ubicación central del state (S3 en este proyecto).
 - **Lock de state**: bloqueo de concurrencia (DynamoDB en este proyecto).
-- **OIDC**: autenticacion federada sin claves estaticas.
+- **OIDC**: autenticación federada sin claves estáticas.
 - **IAM Role**: identidad temporal asumida por CI.
-- **Trust Policy**: quien puede asumir el rol.
-- **Permission Policy**: que acciones puede ejecutar el rol.
+- **Trust Policy**: quién puede asumir el rol.
+- **Permission Policy**: qué acciones puede ejecutar el rol.
 - **Plan**: vista previa de cambios.
-- **Apply**: ejecucion real de cambios.
+- **Apply**: ejecución real de cambios.
 - **Drift**: diferencia entre Terraform y cambios manuales en cloud.
+- **SARIF**: formato estándar (`Static Analysis Results Interchange Format`) para reportar hallazgos de seguridad/análisis estático en herramientas como GitHub Code Scanning.
 
 ## 📚 Referencias oficiales
 
@@ -309,3 +311,4 @@ Recomendaciones:
 - GitHub Actions docs: https://docs.github.com/actions
 - OIDC en GitHub Actions: https://docs.github.com/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
 - `aws-actions/configure-aws-credentials`: https://github.com/aws-actions/configure-aws-credentials
+
