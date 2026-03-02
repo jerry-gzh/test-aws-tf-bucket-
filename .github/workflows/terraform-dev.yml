@@ -53,7 +53,7 @@ jobs:
           role-to-assume: arn:aws:iam::839406385516:role/gh-actions-terraform-test-aws-tf-bucket-dev
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive
@@ -84,7 +84,7 @@ jobs:
           role-to-assume: arn:aws:iam::839406385516:role/gh-actions-terraform-test-aws-tf-bucket-dev
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
 
       - name: Terraform init
         run: terraform init -input=false -reconfigure -backend-config=environments/dev/backend.hcl
