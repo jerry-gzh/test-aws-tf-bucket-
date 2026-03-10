@@ -1,0 +1,64 @@
+# Workflow manual y autónomo para eliminar recursos de Terraform de forma ordenada.
+name: terraform-destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente a destruir (backend + vars de Terraform)"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - qas
+          - prd
+      confirm:
+        description: "Escribe DESTROY para confirmar el borrado"
+        required: true
+        default: "NO"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: "true"
+
+concurrency:
+  group: terraform-destroy-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar confirmación de destrucción
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "DESTROY" ]; then
+            echo "::error::Confirmación inválida. Debes escribir exactamente DESTROY para ejecutar destroy."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::839406385516:role/gh-actions-terraform-test-aws-tf-bucket-dev
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        run: terraform init -input=false -reconfigure -backend-config=environments/${{ github.event.inputs.environment }}/backend.hcl
+
+      - name: Terraform plan destroy
+        run: terraform plan -destroy -input=false -out=destroy.tfplan -var-file=variables/global.auto.tfvars -var-file=variables/env-${{ github.event.inputs.environment }}.tfvars
+
+      - name: Terraform apply destroy
+        run: terraform apply -input=false -auto-approve destroy.tfplan
